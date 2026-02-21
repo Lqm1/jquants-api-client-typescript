@@ -5,9 +5,11 @@
  * Returns data as arrays of plain objects (Record<string, unknown>[]).
  */
 
+import process from "node:process";
+import { readFile, writeFile, access } from "node:fs/promises";
+import { join } from "node:path";
+import { homedir } from "node:os";
 import { parse as parseToml } from "@std/toml";
-import { exists } from "@std/fs/exists";
-import { join } from "@std/path";
 import {
   MARKET_SEGMENT_DATA,
   SECTOR_17_DATA,
@@ -76,7 +78,7 @@ export class JQuantsClient {
     let config: Record<string, string> = {};
 
     // user home config
-    const home = Deno.env.get("HOME") ?? Deno.env.get("USERPROFILE") ?? "";
+    const home = process.env.HOME ?? process.env.USERPROFILE ?? homedir();
     if (home) {
       const userConfigPath = join(home, ".jquants-api", "jquants-api.toml");
       config = { ...config, ...await JQuantsClient._readConfig(userConfigPath) };
@@ -86,13 +88,13 @@ export class JQuantsClient {
     config = { ...config, ...await JQuantsClient._readConfig("jquants-api.toml") };
 
     // env specified config
-    const envConfigPath = Deno.env.get("JQUANTS_API_CLIENT_CONFIG_FILE");
+    const envConfigPath = process.env.JQUANTS_API_CLIENT_CONFIG_FILE;
     if (envConfigPath) {
       config = { ...config, ...await JQuantsClient._readConfig(envConfigPath) };
     }
 
     // env var (highest priority)
-    const envApiKey = Deno.env.get("JQUANTS_API_KEY");
+    const envApiKey = process.env.JQUANTS_API_KEY;
     if (envApiKey) {
       config.api_key = envApiKey;
     }
@@ -100,13 +102,22 @@ export class JQuantsClient {
     return config;
   }
 
+  private static async _fileExists(path: string): Promise<boolean> {
+    try {
+      await access(path);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   private static async _readConfig(configPath: string): Promise<Record<string, string>> {
-    if (!await exists(configPath)) {
+    if (!await JQuantsClient._fileExists(configPath)) {
       return {};
     }
 
     try {
-      const content = await Deno.readTextFile(configPath);
+      const content = await readFile(configPath, { encoding: "utf-8" });
       const parsed = parseToml(content) as Record<string, unknown>;
       const section = parsed["jquants-api-client"];
       if (section && typeof section === "object") {
@@ -823,7 +834,7 @@ export class JQuantsClient {
     }
 
     const data = new Uint8Array(await resp.arrayBuffer());
-    await Deno.writeFile(outputPath, data);
+    await writeFile(outputPath, data);
   }
 
   // ------------------------------------------------------------------

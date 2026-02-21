@@ -10,8 +10,7 @@
   "license": "MIT",
   "imports": {
     "@std/assert": "jsr:@std/assert@1",
-    "@std/toml": "jsr:@std/toml@1",
-    "@std/fs": "jsr:@std/fs@1",
-    "@std/path": "jsr:@std/path@1"
-  }
+    "@std/toml": "jsr:@std/toml@1"
+  },
+  "nodeModulesDir": "auto"
 }
